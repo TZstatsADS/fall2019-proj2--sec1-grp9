@@ -2,7 +2,7 @@
 
 ### [Project Description](doc/project2_desc.md)
 
-![screenshot](doc/map.png)
+![screenshot](./doc/map.png)
 
 In this second project of GR5243 Applied Data Science, we develop a version 2.0 of an *Exploratory Data Analysis and Visualization* shiny app on NYC Crime Tracking using [NYC Open Data](https://data.cityofnewyork.us/Public-Safety/NYPD-Complaint-Data-Current-Year-To-Date-/5uac-w243) website. See [Project 2 Description](doc/project2_desc.md) for more details.  
 

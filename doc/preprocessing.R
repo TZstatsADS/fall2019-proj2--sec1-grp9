@@ -25,7 +25,7 @@ rsconnect::setAccountInfo(name = 'samirh47',
                           secret = '9aQ+vqCwfNIT1u2xoShr9UbP2QZ1551WET6lo0RL')
 
 # data processing
-load("crime_data.rdata")
+load("../data/crime_data.rdata")
 
 crime <- crime %>% mutate(HOUR = as.integer(substr(as.character(TIME), 1, 2)))
 crime$DAY <- toupper(wday(crime$DATE, label = TRUE, abbr = FALSE))

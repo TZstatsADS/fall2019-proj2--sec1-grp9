@@ -1,4 +1,4 @@
-source('preprocessing.R')
+source('../doc/preprocessing.R')
 
 shinyServer(function(input, output) {
   # panel 1 - map
