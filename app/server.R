@@ -1,4 +1,4 @@
-source('../doc/preprocessing.R')
+source('../app/preprocessing.R')
 
 shinyServer(function(input, output) {
   # panel 1 - map
@@ -9,7 +9,7 @@ shinyServer(function(input, output) {
     setView(lat = 40.7130, lng = -74.0059, zoom = 11) %>%
     addLayersControl(baseGroups = c("CartoDB", "Crime Rates"), position = "bottomleft")
   
-  shape <- readOGR("nypp.geojson")
+  shape <- readOGR("../data/nypp.geojson")
   
   # color function
   map2color <- function(x, pal=c('#F2D7D5','#D98880', '#CD6155', '#C0392B', '#922B21', '#641E16'), limits = NULL) {

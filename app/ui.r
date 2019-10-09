@@ -1,4 +1,4 @@
-source('../doc/preprocessing.R')
+source('../app/preprocessing.R')
 
 shinyUI(
   navbarPage("NYC Crime Directory",
