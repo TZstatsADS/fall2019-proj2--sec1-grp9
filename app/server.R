@@ -1,168 +1,101 @@
-library(shiny)
-library(choroplethr)
-library(choroplethrZip)
-library(dplyr)
-library(leaflet)
-library(maps)
-library(rgdal)
+source('preprocessing.R')
 
-## Define Manhattan's neighborhood
-man.nbhd=c("all neighborhoods", "Central Harlem", 
-           "Chelsea and Clinton",
-           "East Harlem", 
-           "Gramercy Park and Murray Hill",
-           "Greenwich Village and Soho", 
-           "Lower Manhattan",
-           "Lower East Side", 
-           "Upper East Side", 
-           "Upper West Side",
-           "Inwood and Washington Heights")
-zip.nbhd=as.list(1:length(man.nbhd))
-zip.nbhd[[1]]=as.character(c(10026, 10027, 10030, 10037, 10039))
-zip.nbhd[[2]]=as.character(c(10001, 10011, 10018, 10019, 10020))
-zip.nbhd[[3]]=as.character(c(10036, 10029, 10035))
-zip.nbhd[[4]]=as.character(c(10010, 10016, 10017, 10022))
-zip.nbhd[[5]]=as.character(c(10012, 10013, 10014))
-zip.nbhd[[6]]=as.character(c(10004, 10005, 10006, 10007, 10038, 10280))
-zip.nbhd[[7]]=as.character(c(10002, 10003, 10009))
-zip.nbhd[[8]]=as.character(c(10021, 10028, 10044, 10065, 10075, 10128))
-zip.nbhd[[9]]=as.character(c(10023, 10024, 10025))
-zip.nbhd[[10]]=as.character(c(10031, 10032, 10033, 10034, 10040))
-
-## Load housing data
-load("../output/count.RData")
-load("../output/mh2009use.RData")
-
-# Define server logic required to draw a histogram
 shinyServer(function(input, output) {
+  # panel 1 - map
+  Background <- leaflet() %>% 
+    addResetMapButton() %>%
+    addTiles("Crime Rates") %>%
+    addProviderTiles("CartoDB", group = "CartoDB")  %>%
+    setView(lat = 40.7130, lng = -74.0059, zoom = 11) %>%
+    addLayersControl(baseGroups = c("CartoDB", "Crime Rates"), position = "bottomleft")
   
-  ## Neighborhood name
-  output$text = renderText({"Selected:"})
-  output$text1 = renderText({
-      paste("{ ", man.nbhd[as.numeric(input$nbhd)+1], " }")
-  })
+  shape <- readOGR("nypp.geojson")
   
-  ## Panel 1: summary plots of time trends, 
-  ##          unit price and full price of sales. 
+  # color function
+  map2color <- function(x, pal=c('#F2D7D5','#D98880', '#CD6155', '#C0392B', '#922B21', '#641E16'), limits = NULL) {
+    if (is.null(limits)) limits = range(x)
+    pal[findInterval(x, seq(limits[1], limits[2], length.out = length(pal) + 1), all.inside = TRUE)]
+  }
   
-  output$distPlot <- renderPlot({
-    
-    ## First filter data for selected neighborhood
-    mh2009.sel=mh2009.use
-    if(input$nbhd>0){
-      mh2009.sel=mh2009.use%>%
-                  filter(region %in% zip.nbhd[[as.numeric(input$nbhd)]])
+  # map output
+  output$selective_map <- renderLeaflet({
+    map_df <- crime 
+    colnames(map_df) <- sapply('ld', FUN = paste0, colnames(crime))
+    for (i in c('ldTIME', 'ldPLACE', 'ldDESCRIPTION')) {
+      if (input[[i]] != 'All') {map_df <- map_df[map_df[, i] == input[[i]],] }
+    }
+    mytable <- xtabs(~ ldDESCRIPTION + ldPLACE + ldTIME + ldPRECINCT, data = map_df)
+    shape@data$mappingdata <- rep(0,77)
+    count <- apply(mytable, 4, sum)
+    for (i in 1:length(count)) {
+      index <- which(shape@data$precinct == names(count)[i])
+      shape@data$mappingdata[index] <- count[i]
     }
     
-    ## Monthly counts
-    month.v=as.vector(table(mh2009.sel$sale.month))
-    
-    ## Price: unit (per sq. ft.) and full
-    type.price=data.frame(bldg.type=c("10", "13", "25", "28"))
-    type.price.sel=mh2009.sel%>%
-                group_by(bldg.type)%>%
-                summarise(
-                  price.mean=mean(sale.price, na.rm=T),
-                  price.median=median(sale.price, na.rm=T),
-                  unit.mean=mean(unit.price, na.rm=T),
-                  unit.median=median(unit.price, na.rm=T),
-                  sale.n=n()
-                )
-    type.price=left_join(type.price, type.price.sel, by="bldg.type")
-    
-    ## Making the plots
-    layout(matrix(c(1,1,1,1,2,2,3,3,2,2,3,3), 3, 4, byrow=T))
-    par(cex.axis=1.3, cex.lab=1.5, 
-        font.axis=2, font.lab=2, col.axis="dark gray", bty="n")
-    
-    ### Sales monthly counts
-    plot(1:12, month.v, xlab="Months", ylab="Total sales", 
-         type="b", pch=21, col="black", bg="red", 
-         cex=2, lwd=2, ylim=c(0, max(month.v,na.rm=T)*1.05))
-    
-    ### Price per square foot
-    plot(c(0, max(type.price[,c(4,5)], na.rm=T)), 
-         c(0,5), 
-         xlab="Price per square foot", ylab="", 
-         bty="l", type="n")
-    text(rep(0, 4), 1:4+0.5, paste(c("coops", "condos", "luxury hotels", "comm. condos"), 
-                                  type.price$sale.n, sep=": "), adj=0, cex=1.5)
-    points(type.price$unit.mean, 1:nrow(type.price), pch=16, col=2, cex=2)
-    points(type.price$unit.median, 1:nrow(type.price),  pch=16, col=4, cex=2)
-    segments(type.price$unit.mean, 1:nrow(type.price), 
-              type.price$unit.median, 1:nrow(type.price),
-             lwd=2)    
-    
-    ### full price
-    plot(c(0, max(type.price[,-1], na.rm=T)), 
-         c(0,5), 
-         xlab="Sales Price", ylab="", 
-         bty="l", type="n")
-    text(rep(0, 4), 1:4+0.5, paste(c("coops", "condos", "luxury hotels", "comm. condos"), 
-                                   type.price$sale.n, sep=": "), adj=0, cex=1.5)
-    points(type.price$price.mean, 1:nrow(type.price), pch=16, col=2, cex=2)
-    points(type.price$price.median, 1:nrow(type.price),  pch=16, col=4, cex=2)
-    segments(type.price$price.mean, 1:nrow(type.price), 
-             type.price$price.median, 1:nrow(type.price),
-             lwd=2)    
+    Background %>% 
+      addPolygons(data = shape, weight = 1.5,  fillOpacity = .5, 
+                  fillColor = map2color(shape@data$mappingdata),
+                  label = ~paste0(shape@data$precinct," Number of counts: ", shape@data$mappingdata),
+                  highlightOptions = highlightOptions(weight = 3, color = "white", bringToFront = TRUE))
   })
   
-  ## Panel 2: map of sales distribution
-  output$distPlot1 <- renderPlot({
-    count.df.sel=count.df
-    if(input$nbhd>0){
-      count.df.sel=count.df%>%
-        filter(region %in% zip.nbhd[[as.numeric(input$nbhd)]])
+  # panel 2 - time series
+  output$plot = renderPlot({
+    plot_df <- crime
+    if (isTruthy(input$DATE)) {
+      plot_df <- plot_df[plot_df$DATE == input$DATE,]
+    } 
+    for (i in c('BORO', 'DESCRIPTION', 'DAY', 'VIC_AGE', 'VIC_RACE', 'VIC_SEX', 'SUSP_AGE', 'SUSP_RACE', 'SUSP_SEX')) {
+      if (input[[i]] != 'All') {
+        plot_df <- plot_df[plot_df[, i] == input[[i]] ,]
+      }
     }
-    # make the map for selected neighhoods
-    
-    zip_choropleth(count.df.sel,
-                   title       = "2009 Manhattan housing sales",
-                   legend      = "Number of sales",
-                   county_zoom = 36061)
+    plot_hist <- geom_histogram(breaks = plot_breaks, color = 'blue', fill = 'white')
+    if (input$HIST == 'Density') { 
+      plot_hist <- geom_histogram(aes(y = ..density..), breaks = plot_breaks, color = 'blue', fill = 'white')
+    }
+    if (input$DENSITY == 'On' & input$HIST == 'Frequency') { 
+      plot_density <- geom_density(aes(y = ..density.. * (nrow(plot_df)*60*60)), fill = 'red', alpha = 0.25) 
+    } else if (input$DENSITY == 'On' & input$HIST == 'Density') {
+      plot_density <- geom_density(aes(y = ..density..), fill = 'red', alpha = 0.25)
+    } else {
+      plot_density <- geom_blank()
+    }
+    ggplot(plot_df, aes(x = DATE_TIME)) +
+      plot_hist + 
+      plot_density +
+      geom_vline(aes(xintercept = median(plot_df$DATE_TIME)), linetype = "dashed", size = 1) +
+      scale_x_datetime(labels = date_format("%H:%M"), breaks = date_breaks('2 hour')) +
+      labs(caption = 'Dashed line marks median of selected population', title = input$DATE) +
+      theme(plot.caption = element_text(face = "italic", size = 14),
+            axis.text.x = element_text(size = 13),
+            axis.text.y = element_text(size = 13),
+            axis.title.x = element_text(size = 18),
+            axis.title.y = element_text(size = 18)) +
+      xlab('Hour') + ylab('Frequency') 
   })
   
-  ## Panel 3: leaflet
-  output$map <- renderLeaflet({
-    count.df.sel=count.df
-    if(input$nbhd>0){
-      count.df.sel=count.df%>%
-        filter(region %in% zip.nbhd[[as.numeric(input$nbhd)]])
-    }
+  # panel 3 - conditional probability
+  output$CBplot <- renderPlot({
+    df1 <- crime
+    df1$DESCRIPTION <- as.factor(df1$DESCRIPTION)
+    df1 <- crime[which(crime$BORO == input$jgBORO), ]
+    df1 <- df1[which(df1$HOUR == input$jgHOUR), ]
+    df1 <- df1[which(df1$DAY == input$jgDAY), ]
+    df1 <- df1[which(df1$VIC_SEX == input$jgVIC_SEX), ]
+    df1 <- df1[which(df1$VIC_AGE == input$jgVIC_AGE),]
+    df2 <- as.data.frame(xtabs(~DESCRIPTION, data = df1))
+    df3 <- subset(df2, df2$Freq != 0)
     
-    # From https://data.cityofnewyork.us/Business/Zip-Code-Boundaries/i8iw-xf4u/data
-    NYCzipcodes <- readOGR("../data/ZIP_CODE_040114.shp",
-                           #layer = "ZIP_CODE", 
-                           verbose = FALSE)
-    
-    selZip <- subset(NYCzipcodes, NYCzipcodes$ZIPCODE %in% count.df.sel$region)
-    
-    # ----- Transform to EPSG 4326 - WGS84 (required)
-    subdat<-spTransform(selZip, CRS("+init=epsg:4326"))
-    
-    # ----- save the data slot
-    subdat_data=subdat@data[,c("ZIPCODE", "POPULATION")]
-    subdat.rownames=rownames(subdat_data)
-    subdat_data=
-      subdat_data%>%left_join(count.df, by=c("ZIPCODE" = "region"))
-    rownames(subdat_data)=subdat.rownames
-    
-    # ----- to write to geojson we need a SpatialPolygonsDataFrame
-    subdat<-SpatialPolygonsDataFrame(subdat, data=subdat_data)
-    
-    # ----- set uo color pallette https://rstudio.github.io/leaflet/colors.html
-    # Create a continuous palette function
-    pal <- colorNumeric(
-      palette = "Blues",
-      domain = subdat$POPULATION
-    )
-    
-    leaflet(subdat) %>%
-      addTiles()%>%
-      addPolygons(
-        stroke = T, weight=1,
-        fillOpacity = 0.6,
-        color = ~pal(POPULATION)
-      )
+    ggplot(df3, aes(x = DESCRIPTION, y = Freq/sum(Freq), fill = DESCRIPTION)) + 
+      geom_bar(stat = "identity", position = "stack") + 
+      ggtitle("Chances Of Facing Different Crimes") +
+      ylab("") + xlab("") + 
+      scale_colour_brewer(name = 'Crime Type', palette = 'Paired') +
+      theme(plot.title = element_text(size = 25),
+            axis.text.x = element_text(face = "bold", size = 13),
+            axis.text.y = element_text(face = "bold", size = 13)) + 
+      coord_flip()
   })
+  
 })

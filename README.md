@@ -2,9 +2,9 @@
 
 ### [Project Description](doc/project2_desc.md)
 
-![screenshot](doc/screenshot2.png)
+![screenshot](doc/map.png)
 
-In this second project of GR5243 Applied Data Science, we develop a version 2.0 of an *Exploratory Data Analysis and Visualization* shiny app on a topic of your choice using [NYC Open Data](https://opendata.cityofnewyork.us/) or U.S. government open data released on the [data.gov](https://data.gov/) website. See [Project 2 Description](doc/project2_desc.md) for more details.  
+In this second project of GR5243 Applied Data Science, we develop a version 2.0 of an *Exploratory Data Analysis and Visualization* shiny app on NYC Crime Tracking using [NYC Open Data](https://data.cityofnewyork.us/Public-Safety/NYPD-Complaint-Data-Current-Year-To-Date-/5uac-w243) website. See [Project 2 Description](doc/project2_desc.md) for more details.  
 
 The **learning goals** for this project is:
 
@@ -20,17 +20,18 @@ The **learning goals** for this project is:
 ## Project Title Lorem ipsum dolor sit amet
 Term: Fall 2019
 
-+ Team #
++ Team 9
 + **Projec title**: + Team members
-	+ team member 1
-	+ team member 2
-	+ team member 3
-	+ team member 4
-	+ team member 5
+	+ Dong, Lulu
+	+ Gao, Jason
+	+ Hadzic, Samir
+	+ Song, Mingming
 
-+ **Project summary**: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
++ **Project summary**: This Shiny app is created for crime tracking on NYC. We used data for 2019 with 222260 records and 77 zones of NYC in total. This data visualization project allows users to explore trends in New York Crime crime trends accross several factors, including geographic variables such as location, borough, and place (i.e. store, street), as well as suspect and victim demographics, and crime type. In this manner the app can serve as a research tool for scholars or city planners. On a more basic level, the app can be used by every day individuals who wish to assess the crime risk of different areas and times, whether it is for their own personal travel, preparation for buying a property, or any other personal task.
 
-+ **Contribution statement**: ([default](doc/a_note_on_contributions.md)) All team members contributed equally in all stages of this project. All team members approve our work presented in this GitHub repository including this contributions statement. 
++ **Contribution statement**: ([default](doc/a_note_on_contributions.md)) We basically met and worked together on our project. Lulu cleaned data first and others helped to improve depending on their own needs. Lulu and Mingming worked on UI templates and map develop together. Samir made ‘By the Hour' analysis on panel 2 and Jason worked on chances of user facing crimes based on historical data in panel 3. We worked together on debugging and deploying the app. All team members approve our work presented in this GitHub repository including this contributions statement.
+
+
 
 Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by [RICH FITZJOHN](http://nicercode.github.io/about/#Team) (@richfitz). This folder is orgarnized as follows.
 
